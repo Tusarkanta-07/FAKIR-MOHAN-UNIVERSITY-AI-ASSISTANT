@@ -1,7 +1,7 @@
 <div align="center">
 
-# 🤖 Chatbase Clone
-**A fully functional, open-source Chatbase.co replica with a website-only data source.**
+# 🤖 FMU AI ASSISTANT
+**A fully functional, open-source AI assistant platform with a website-only data source.**
 
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue?style=for-the-badge&logo=python)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-009688?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
