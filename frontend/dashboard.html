@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — Chatbase</title>
+    <meta name="description" content="Manage your AI chatbots. View analytics, update settings, and deploy widgets.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%236C63FF'/><text x='50%25' y='55%25' text-anchor='middle' dominant-baseline='central' font-size='18' fill='white'>⚡</text></svg>">
+</head>
+<body>
+    <!-- ==================== NAVBAR ==================== -->
+    <nav class="navbar scrolled">
+        <div class="navbar-inner">
+            <a href="index.html" class="navbar-logo">
+                <div class="navbar-logo-icon">⚡</div>
+                Chatbase
+            </a>
+            <div class="navbar-nav">
+                <a href="dashboard.html" style="color: var(--text-primary)">Dashboard</a>
+                <a href="create.html">Create</a>
+            </div>
+            <div class="navbar-actions">
+                <a href="embed.html" class="btn btn-ghost">⚙️ Settings</a>
+                <div class="btn btn-secondary btn-sm" id="api-status-badge">
+                    <span class="status-dot" style="width:8px;height:8px;border-radius:50%;background:#FF5050;display:inline-block;margin-right:4px"></span>
+                    API: Not Connected
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ==================== DASHBOARD LAYOUT ==================== -->
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Navigation</div>
+                <div class="sidebar-item active" onclick="showSection('overview')">
+                    <span class="sidebar-item-icon">📊</span>
+                    Overview
+                </div>
+                <div class="sidebar-item" onclick="showSection('chatbots')">
+                    <span class="sidebar-item-icon">🤖</span>
+                    My Chatbots
+                </div>
+                <div class="sidebar-item" onclick="window.location.href='create.html'">
+                    <span class="sidebar-item-icon">➕</span>
+                    Create New
+                </div>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Settings</div>
+                <div class="sidebar-item" onclick="showApiModal()">
+                    <span class="sidebar-item-icon">🔑</span>
+                    API Settings
+                </div>
+                <div class="sidebar-item" onclick="window.location.href='embed.html'">
+                    <span class="sidebar-item-icon">🔗</span>
+                    Embed Code
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Overview Section -->
+            <div id="section-overview">
+                <div class="page-header">
+                    <h1>Dashboard</h1>
+                    <a href="create.html" class="btn btn-primary">+ New Chatbot</a>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="bots-grid" style="margin-bottom: var(--space-xl)">
+                    <div class="glass-card" style="padding: var(--space-xl)">
+                        <div style="display:flex;align-items:center;gap:var(--space-md)">
+                            <div style="width:48px;height:48px;border-radius:var(--radius-md);background:rgba(108,99,255,0.15);display:flex;align-items:center;justify-content:center;font-size:24px">🤖</div>
+                            <div>
+                                <div style="font-size:var(--font-size-2xl);font-weight:800" id="stat-bots">0</div>
+                                <div style="font-size:var(--font-size-sm);color:var(--text-tertiary)">Total Chatbots</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-card" style="padding: var(--space-xl)">
+                        <div style="display:flex;align-items:center;gap:var(--space-md)">
+                            <div style="width:48px;height:48px;border-radius:var(--radius-md);background:rgba(0,212,170,0.15);display:flex;align-items:center;justify-content:center;font-size:24px">💬</div>
+                            <div>
+                                <div style="font-size:var(--font-size-2xl);font-weight:800" id="stat-messages">0</div>
+                                <div style="font-size:var(--font-size-sm);color:var(--text-tertiary)">Total Messages</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-card" style="padding: var(--space-xl)">
+                        <div style="display:flex;align-items:center;gap:var(--space-md)">
+                            <div style="width:48px;height:48px;border-radius:var(--radius-md);background:rgba(255,189,46,0.15);display:flex;align-items:center;justify-content:center;font-size:24px">📄</div>
+                            <div>
+                                <div style="font-size:var(--font-size-2xl);font-weight:800" id="stat-chunks">0</div>
+                                <div style="font-size:var(--font-size-sm);color:var(--text-tertiary)">Data Chunks</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chatbots List -->
+                <h2 style="font-size: var(--font-size-lg); font-weight: 600; margin-bottom: var(--space-lg)">My Chatbots</h2>
+                <div class="bots-grid" id="bots-grid">
+                    <!-- Populated by JS -->
+                </div>
+
+                <!-- Empty State -->
+                <div class="empty-state" id="empty-state" style="display:none">
+                    <div class="empty-state-icon">🤖</div>
+                    <h3>No chatbots yet</h3>
+                    <p>Create your first AI chatbot by crawling your website and uploading the data.</p>
+                    <a href="create.html" class="btn btn-primary">+ Create Chatbot</a>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ==================== API Settings Modal ==================== -->
+    <div class="modal-overlay" id="api-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>🔑 API Settings</h2>
+                <button class="modal-close" onclick="closeApiModal()">×</button>
+            </div>
+            <div class="input-group" style="margin-bottom: var(--space-lg)">
+                <label>Backend URL (Hugging Face Space)</label>
+                <input type="url" class="input-field" id="api-url-input" 
+                       placeholder="https://your-space.hf.space" 
+                       value="">
+                <small style="color:var(--text-tertiary);font-size:var(--font-size-xs)">
+                    The URL of your deployed Hugging Face Space backend
+                </small>
+            </div>
+            <div style="display:flex;gap:var(--space-sm);justify-content:flex-end">
+                <button class="btn btn-secondary" onclick="closeApiModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveApiUrl()">Save & Connect</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== Delete Confirmation Modal ==================== -->
+    <div class="modal-overlay" id="delete-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>⚠️ Delete Chatbot</h2>
+                <button class="modal-close" onclick="closeDeleteModal()">×</button>
+            </div>
+            <p style="color:var(--text-secondary);margin-bottom:var(--space-lg)">
+                Are you sure you want to delete <strong id="delete-bot-name"></strong>? This action cannot be undone.
+            </p>
+            <div style="display:flex;gap:var(--space-sm);justify-content:flex-end">
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="app.js"></script>
+    <script>
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            loadApiUrl();
+            loadChatbots();
+        });
+
+        function showSection(section) {
+            document.querySelectorAll('.sidebar-item').forEach(item => item.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        // --- API Modal ---
+        function showApiModal() {
+            document.getElementById('api-url-input').value = getApiUrl();
+            document.getElementById('api-modal').classList.add('active');
+        }
+
+        function closeApiModal() {
+            document.getElementById('api-modal').classList.remove('active');
+        }
+
+        function saveApiUrl() {
+            const url = document.getElementById('api-url-input').value.trim();
+            if (!url) {
+                showToast('Please enter a valid URL', 'error');
+                return;
+            }
+            localStorage.setItem('chatbase_api_url', url);
+            closeApiModal();
+            showToast('API URL saved successfully!', 'success');
+            updateApiStatus();
+            loadChatbots();
+        }
+
+        function loadApiUrl() {
+            const url = localStorage.getItem('chatbase_api_url');
+            if (url) {
+                updateApiStatus();
+            }
+        }
+
+        async function updateApiStatus() {
+            const badge = document.getElementById('api-status-badge');
+            const url = getApiUrl();
+            if (!url) {
+                badge.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#FF5050;display:inline-block;margin-right:4px"></span>API: Not Connected';
+                return;
+            }
+
+            try {
+                const resp = await fetch(`${url}/api/health`, { signal: AbortSignal.timeout(5000) });
+                if (resp.ok) {
+                    badge.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#28CA41;display:inline-block;margin-right:4px"></span>API: Connected';
+                } else {
+                    badge.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#FFBD2E;display:inline-block;margin-right:4px"></span>API: Error';
+                }
+            } catch {
+                badge.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#FF5050;display:inline-block;margin-right:4px"></span>API: Offline';
+            }
+        }
+
+        // --- Chatbots ---
+        async function loadChatbots() {
+            const grid = document.getElementById('bots-grid');
+            const emptyState = document.getElementById('empty-state');
+            const url = getApiUrl();
+
+            // Always show create card
+            let html = `
+                <div class="create-bot-card glass-card" onclick="window.location.href='create.html'">
+                    <div class="create-bot-icon">+</div>
+                    <h3>Create New Chatbot</h3>
+                    <p>Train an AI on your website</p>
+                </div>
+            `;
+
+            if (!url) {
+                grid.innerHTML = html;
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            try {
+                const resp = await fetch(`${url}/api/chatbots`, { signal: AbortSignal.timeout(15000) });
+                const data = await resp.json();
+
+                if (data.chatbots && data.chatbots.length > 0) {
+                    emptyState.style.display = 'none';
+
+                    // Update stats
+                    document.getElementById('stat-bots').textContent = data.chatbots.length;
+                    let totalMessages = 0, totalChunks = 0;
+                    data.chatbots.forEach(bot => {
+                        totalMessages += bot.message_count || 0;
+                        totalChunks += bot.total_chunks || 0;
+                    });
+                    document.getElementById('stat-messages').textContent = totalMessages;
+                    document.getElementById('stat-chunks').textContent = totalChunks;
+
+                    data.chatbots.forEach(bot => {
+                        html += `
+                            <div class="bot-card glass-card" onclick="window.location.href='chat.html?bot=${encodeURIComponent(bot.id)}'">
+                                <div class="bot-card-header">
+                                    <div class="bot-avatar">🤖</div>
+                                    <div class="bot-info">
+                                        <h3>${escapeHtml(bot.name || bot.id)}</h3>
+                                        <p>${escapeHtml(bot.source_url || 'No source URL')}</p>
+                                    </div>
+                                </div>
+                                <div class="bot-stats">
+                                    <div class="bot-stat">
+                                        <span class="bot-stat-value">${bot.total_chunks || 0}</span>
+                                        <span class="bot-stat-label">Chunks</span>
+                                    </div>
+                                    <div class="bot-stat">
+                                        <span class="bot-stat-value">${bot.message_count || 0}</span>
+                                        <span class="bot-stat-label">Messages</span>
+                                    </div>
+                                    <div class="bot-stat">
+                                        <span class="bot-stat-value">${bot.chat_count || 0}</span>
+                                        <span class="bot-stat-label">Conversations</span>
+                                    </div>
+                                </div>
+                                <div style="display:flex;gap:var(--space-sm);margin-top:var(--space-md)">
+                                    <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();window.location.href='embed.html?bot=${encodeURIComponent(bot.id)}'">⚙️ Settings</button>
+                                    <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();showDeleteModal('${escapeHtml(bot.id)}','${escapeHtml(bot.name || bot.id)}')">🗑️ Delete</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    emptyState.style.display = 'block';
+                }
+            } catch (err) {
+                console.error('Failed to load chatbots:', err);
+                emptyState.style.display = 'block';
+            }
+
+            grid.innerHTML = html;
+        }
+
+        // --- Delete ---
+        let deleteBotId = null;
+
+        function showDeleteModal(id, name) {
+            deleteBotId = id;
+            document.getElementById('delete-bot-name').textContent = name;
+            document.getElementById('delete-modal').classList.add('active');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('delete-modal').classList.remove('active');
+            deleteBotId = null;
+        }
+
+        async function confirmDelete() {
+            if (!deleteBotId) return;
+            const url = getApiUrl();
+            try {
+                await fetch(`${url}/api/chatbot/${encodeURIComponent(deleteBotId)}`, { method: 'DELETE', signal: AbortSignal.timeout(15000) });
+                showToast('Chatbot deleted successfully', 'success');
+                closeDeleteModal();
+                loadChatbots();
+            } catch (err) {
+                showToast('Failed to delete chatbot', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

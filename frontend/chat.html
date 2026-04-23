@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat — Chatbase</title>
+    <meta name="description" content="Test your AI chatbot.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%236C63FF'/><text x='50%25' y='55%25' text-anchor='middle' dominant-baseline='central' font-size='18' fill='white'>⚡</text></svg>">
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar scrolled">
+        <div class="navbar-inner">
+            <a href="index.html" class="navbar-logo">
+                <div class="navbar-logo-icon">⚡</div>
+                Chatbase
+            </a>
+            <div class="navbar-nav">
+                <a href="dashboard.html">Dashboard</a>
+            </div>
+            <div class="navbar-actions">
+                <a href="dashboard.html" class="btn btn-ghost">← Dashboard</a>
+                <a id="embed-link" href="embed.html" class="btn btn-secondary btn-sm">🔗 Embed</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- CHAT LAYOUT -->
+    <div class="chat-layout">
+        <!-- Chat Sidebar -->
+        <div class="chat-sidebar">
+            <div class="chat-sidebar-header">
+                <h2 id="sidebar-bot-name">AI Assistant</h2>
+                <p id="sidebar-bot-url">Loading...</p>
+            </div>
+            <div style="padding:var(--space-md)">
+                <button class="btn btn-primary" style="width:100%" onclick="newConversation()">
+                    + New Chat
+                </button>
+            </div>
+            <div class="chat-list" id="chat-list">
+                <!-- Conversations listed here -->
+            </div>
+            <div style="padding:var(--space-md);border-top:1px solid var(--border-subtle)">
+                <div class="sidebar-item" onclick="window.location.href='embed.html?bot='+encodeURIComponent(currentBotId)">
+                    <span class="sidebar-item-icon">⚙️</span>
+                    Settings
+                </div>
+                <div class="sidebar-item" onclick="window.location.href='dashboard.html'">
+                    <span class="sidebar-item-icon">←</span>
+                    Back to Dashboard
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Main -->
+        <div class="chat-main">
+            <div class="chat-header">
+                <div class="chat-header-info">
+                    <div class="chat-header-avatar">🤖</div>
+                    <div>
+                        <div class="chat-header-name" id="chat-bot-name">AI Assistant</div>
+                        <div class="chat-header-status">Online</div>
+                    </div>
+                </div>
+                <div style="display:flex;gap:var(--space-sm)">
+                    <button class="btn btn-ghost btn-sm" onclick="clearChat()" title="Clear chat">🗑️</button>
+                    <button class="btn btn-ghost btn-sm" onclick="toggleSources()" title="Toggle sources" id="sources-toggle">📚</button>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="chat-messages">
+                <!-- Messages render here -->
+            </div>
+
+            <!-- Sources Panel (hidden by default) -->
+            <div id="sources-panel" style="display:none;padding:var(--space-md);border-top:1px solid var(--border-subtle);background:var(--bg-secondary);max-height:200px;overflow-y:auto">
+                <h4 style="font-size:var(--font-size-sm);color:var(--text-tertiary);margin-bottom:var(--space-sm)">📚 Sources Used</h4>
+                <div id="sources-content" style="font-size:var(--font-size-xs);color:var(--text-secondary)"></div>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="chat-input-container">
+                <div class="chat-input-wrapper">
+                    <textarea class="chat-input" id="chat-input" 
+                              placeholder="Type your message..." 
+                              rows="1"
+                              onkeydown="handleKeyDown(event)"></textarea>
+                    <button class="chat-send-btn" id="send-btn" onclick="sendMessage()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+                <div class="chat-footer-note">
+                    Powered by Gemini 1.5 Flash • Responses may not always be accurate
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="app.js"></script>
+    <script>
+        let currentBotId = '';
+        let chatHistory = [];
+        let showSources = false;
+        let lastSources = [];
+        let conversations = [];
+        let currentConvIndex = 0;
+
+        // Init
+        document.addEventListener('DOMContentLoaded', async () => {
+            const params = new URLSearchParams(window.location.search);
+            currentBotId = params.get('bot');
+
+            if (!currentBotId) {
+                showToast('No chatbot specified', 'error');
+                return;
+            }
+
+            document.getElementById('embed-link').href = `embed.html?bot=${encodeURIComponent(currentBotId)}`;
+
+            const apiUrl = getApiUrl();
+            if (!apiUrl) {
+                showToast('API URL not configured. Go to Dashboard → API Settings', 'error');
+                return;
+            }
+
+            // Load bot info
+            try {
+                const resp = await fetch(`${apiUrl}/api/chatbot/${encodeURIComponent(currentBotId)}`, { signal: AbortSignal.timeout(15000) });
+                if (!resp.ok) throw new Error('Bot not found');
+                const bot = await resp.json();
+
+                document.getElementById('sidebar-bot-name').textContent = bot.name || bot.id;
+                document.getElementById('sidebar-bot-url').textContent = bot.source_url || '';
+                document.getElementById('chat-bot-name').textContent = bot.name || bot.id;
+                document.title = `${bot.name || bot.id} — Chatbase`;
+
+                // Show initial message
+                const initialMsg = bot.settings?.initial_message || 'Hi! How can I help you?';
+                addMessage('bot', initialMsg);
+
+            } catch (err) {
+                showToast(`Error: ${err.message}`, 'error');
+            }
+
+            // Load conversations from localStorage
+            loadConversations();
+
+            // Auto-resize input
+            const input = document.getElementById('chat-input');
+            input.addEventListener('input', () => {
+                input.style.height = 'auto';
+                input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+            });
+        });
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function addMessage(role, content, animate = true) {
+            const container = document.getElementById('chat-messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${role}`;
+            if (!animate) msgDiv.style.animation = 'none';
+
+            const avatar = role === 'bot' ? '🤖' : '👤';
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            msgDiv.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div>
+                    <div class="message-bubble">${formatMessage(content)}</div>
+                    <div class="message-time">${time}</div>
+                </div>
+            `;
+
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+
+            return msgDiv;
+        }
+
+        function showTyping() {
+            const container = document.getElementById('chat-messages');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message bot';
+            typingDiv.id = 'typing-indicator';
+            typingDiv.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div class="message-bubble">
+                    <div class="typing-indicator">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(typingDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function removeTyping() {
+            const typing = document.getElementById('typing-indicator');
+            if (typing) typing.remove();
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            const apiUrl = getApiUrl();
+            if (!apiUrl) {
+                showToast('API URL not configured', 'error');
+                return;
+            }
+
+            // Add user message
+            addMessage('user', message);
+            chatHistory.push({ role: 'user', content: message });
+            input.value = '';
+            input.style.height = 'auto';
+
+            // Disable send
+            const sendBtn = document.getElementById('send-btn');
+            sendBtn.disabled = true;
+
+            // Show typing
+            showTyping();
+
+            try {
+                const resp = await fetch(`${apiUrl}/api/chat/${encodeURIComponent(currentBotId)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        history: chatHistory.slice(-10),
+                        stream: false,
+                    }),
+                    signal: AbortSignal.timeout(60000),
+                });
+
+                removeTyping();
+
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    throw new Error(err.detail || 'Chat failed');
+                }
+
+                const data = await resp.json();
+                const botResponse = data.response || 'Sorry, I could not generate a response.';
+
+                addMessage('bot', botResponse);
+                chatHistory.push({ role: 'assistant', content: botResponse });
+
+                // Store sources
+                if (data.sources) {
+                    lastSources = data.sources;
+                    updateSourcesPanel();
+                }
+
+                // Save conversation
+                saveConversation();
+
+            } catch (err) {
+                removeTyping();
+                addMessage('bot', `⚠️ Error: ${err.message}`);
+            }
+
+            sendBtn.disabled = false;
+            input.focus();
+        }
+
+        function formatMessage(text) {
+            // Basic markdown-like formatting
+            let formatted = escapeHtml(text);
+            // Bold
+            formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // Italic
+            formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            // Code blocks
+            formatted = formatted.replace(/```([\s\S]*?)```/g, '<pre style="background:var(--bg-primary);padding:var(--space-sm);border-radius:var(--radius-sm);margin:var(--space-sm) 0;overflow-x:auto"><code>$1</code></pre>');
+            // Inline code
+            formatted = formatted.replace(/`(.*?)`/g, '<code style="background:var(--bg-primary);padding:1px 4px;border-radius:3px;font-size:0.9em">$1</code>');
+            // Line breaks
+            formatted = formatted.replace(/\n/g, '<br>');
+            // Links
+            formatted = formatted.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" style="color:var(--primary-light);text-decoration:underline">$1</a>');
+            return formatted;
+        }
+
+        // Sources
+        function toggleSources() {
+            showSources = !showSources;
+            document.getElementById('sources-panel').style.display = showSources ? 'block' : 'none';
+            document.getElementById('sources-toggle').style.background = showSources ? 'var(--bg-glass-hover)' : '';
+        }
+
+        function updateSourcesPanel() {
+            const panel = document.getElementById('sources-content');
+            if (!lastSources.length) {
+                panel.innerHTML = '<p>No sources available for the last response.</p>';
+                return;
+            }
+            panel.innerHTML = lastSources.map((s, i) => `
+                <div style="padding:var(--space-sm);background:var(--bg-input);border-radius:var(--radius-sm);margin-bottom:var(--space-xs)">
+                    <strong>Source ${i + 1}</strong> (Score: ${(s.score * 100).toFixed(0)}%)<br>
+                    ${escapeHtml(s.content)}...
+                </div>
+            `).join('');
+        }
+
+        // Conversation management
+        function newConversation() {
+            chatHistory = [];
+            document.getElementById('chat-messages').innerHTML = '';
+            lastSources = [];
+
+            // Re-show initial message
+            const name = document.getElementById('chat-bot-name').textContent;
+            addMessage('bot', `Hi! I'm ${name}. How can I help you?`);
+
+            currentConvIndex = conversations.length;
+        }
+
+        function clearChat() {
+            if (confirm('Clear this conversation?')) {
+                newConversation();
+            }
+        }
+
+        function saveConversation() {
+            const key = `chatbase_conv_${currentBotId}`;
+            let convs = JSON.parse(localStorage.getItem(key) || '[]');
+
+            const firstUserMsg = chatHistory.find(m => m.role === 'user');
+            const convData = {
+                title: firstUserMsg ? firstUserMsg.content.substring(0, 50) : 'New Conversation',
+                messages: chatHistory,
+                updated: Date.now(),
+            };
+
+            if (currentConvIndex < convs.length) {
+                convs[currentConvIndex] = convData;
+            } else {
+                convs.push(convData);
+                currentConvIndex = convs.length - 1;
+            }
+
+            localStorage.setItem(key, JSON.stringify(convs));
+            loadConversations();
+        }
+
+        function loadConversations() {
+            const key = `chatbase_conv_${currentBotId}`;
+            conversations = JSON.parse(localStorage.getItem(key) || '[]');
+
+            const list = document.getElementById('chat-list');
+            list.innerHTML = conversations.map((conv, i) => `
+                <div class="chat-list-item ${i === currentConvIndex ? 'active' : ''}" onclick="loadConversation(${i})">
+                    <h4>${escapeHtml(conv.title)}</h4>
+                    <p>${new Date(conv.updated).toLocaleDateString()}</p>
+                </div>
+            `).join('');
+        }
+
+        function loadConversation(index) {
+            const conv = conversations[index];
+            if (!conv) return;
+
+            currentConvIndex = index;
+            chatHistory = conv.messages || [];
+
+            const container = document.getElementById('chat-messages');
+            container.innerHTML = '';
+
+            // Re-render messages
+            chatHistory.forEach(msg => {
+                const role = msg.role === 'user' ? 'user' : 'bot';
+                addMessage(role, msg.content, false);
+            });
+
+            loadConversations(); // Update active state
+        }
+    </script>
+</body>
+</html>

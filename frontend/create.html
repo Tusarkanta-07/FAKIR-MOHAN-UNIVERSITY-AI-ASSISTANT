@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Chatbot — Chatbase</title>
+    <meta name="description" content="Create a new AI chatbot by entering your website URL.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%236C63FF'/><text x='50%25' y='55%25' text-anchor='middle' dominant-baseline='central' font-size='18' fill='white'>⚡</text></svg>">
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar scrolled">
+        <div class="navbar-inner">
+            <a href="index.html" class="navbar-logo">
+                <div class="navbar-logo-icon">⚡</div>
+                Chatbase
+            </a>
+            <div class="navbar-nav">
+                <a href="dashboard.html">Dashboard</a>
+                <a href="create.html" style="color: var(--text-primary)">Create</a>
+            </div>
+            <div class="navbar-actions">
+                <a href="dashboard.html" class="btn btn-ghost">← Back</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- CREATE FORM -->
+    <div class="dashboard-layout" style="justify-content:center">
+        <main class="main-content" style="margin-left:0;max-width:800px">
+            <div class="page-header">
+                <h1>Create New Chatbot</h1>
+            </div>
+
+            <!-- Source Tabs -->
+            <div class="form-card glass-card">
+                <h2>📋 Data Source</h2>
+                <div class="source-tabs">
+                    <button class="source-tab active" id="tab-website">🌐 Website</button>
+                    <button class="source-tab disabled" title="File upload not supported">📄 File Upload</button>
+                    <button class="source-tab disabled" title="Coming soon">📝 Text</button>
+                </div>
+
+                <div class="input-group">
+                    <label>Website URL</label>
+                    <div style="display:flex;gap:var(--space-sm)">
+                        <input type="url" class="input-field" id="website-url" 
+                               placeholder="https://example.com" style="flex:1">
+                        <button class="btn btn-secondary" onclick="addUrl()">Add</button>
+                    </div>
+                    <small style="color:var(--text-tertiary);font-size:var(--font-size-xs)">
+                        Enter the website URL to crawl. Use the Colab crawler for best results.
+                    </small>
+                </div>
+
+                <div class="url-list" id="url-list">
+                    <!-- URLs added here -->
+                </div>
+            </div>
+
+            <!-- Chatbot Settings -->
+            <div class="form-card glass-card">
+                <h2>⚙️ Chatbot Settings</h2>
+
+                <div class="input-group">
+                    <label>Chatbot Name</label>
+                    <input type="text" class="input-field" id="bot-name" 
+                           placeholder="My Website Assistant">
+                </div>
+
+                <div class="input-group">
+                    <label>Chatbot ID</label>
+                    <input type="text" class="input-field" id="bot-id" 
+                           placeholder="my-website-assistant"
+                           pattern="[a-z0-9-]+"
+                           title="Only lowercase letters, numbers, and hyphens">
+                    <small style="color:var(--text-tertiary);font-size:var(--font-size-xs)">
+                        Used in API calls. Must match the ID used in the Colab crawler.
+                    </small>
+                </div>
+
+                <div class="input-group">
+                    <label>Initial Message</label>
+                    <input type="text" class="input-field" id="bot-initial-msg" 
+                           placeholder="Hi! How can I help you today?"
+                           value="Hi! I'm an AI assistant. How can I help you today?">
+                </div>
+
+                <div class="input-group">
+                    <label>System Prompt (Instructions for the AI)</label>
+                    <textarea class="input-field" id="bot-system-prompt" rows="4" 
+                              placeholder="You are a helpful assistant that answers questions based on the provided website content...">You are a helpful AI assistant. Answer questions based on the provided context from the website. Be concise, accurate, and friendly. If you don't know the answer, say so honestly.</textarea>
+                </div>
+
+                <div class="input-group">
+                    <label>Temperature (0 = Precise, 1 = Creative)</label>
+                    <div style="display:flex;align-items:center;gap:var(--space-md)">
+                        <input type="range" id="bot-temperature" min="0" max="1" step="0.1" value="0.7"
+                               style="flex:1;accent-color:var(--primary)">
+                        <span id="temp-value" style="font-size:var(--font-size-sm);color:var(--text-secondary);min-width:30px">0.7</span>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Theme Color</label>
+                    <div class="color-picker-group">
+                        <input type="color" id="bot-color" value="#6C63FF" 
+                               style="width:48px;height:48px;border:none;border-radius:var(--radius-sm);cursor:pointer;background:transparent">
+                        <span id="color-value" style="font-size:var(--font-size-sm);color:var(--text-secondary)">#6C63FF</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Upload (Manual) -->
+            <div class="form-card glass-card">
+                <h2>📤 Upload Crawled Data</h2>
+                <p style="color:var(--text-secondary);font-size:var(--font-size-sm);margin-bottom:var(--space-lg)">
+                    Upload the <code style="background:var(--bg-input);padding:2px 6px;border-radius:4px">chunks.json</code> file generated by the Colab crawler.
+                </p>
+
+                <div class="input-group">
+                    <label>Upload chunks.json</label>
+                    <input type="file" id="chunks-file" accept=".json" class="input-field"
+                           style="padding:var(--space-md)">
+                </div>
+
+                <div style="text-align:center;color:var(--text-tertiary);margin:var(--space-md) 0;font-size:var(--font-size-sm)">
+                    — or paste JSON directly —
+                </div>
+
+                <div class="input-group">
+                    <label>Paste chunks.json content</label>
+                    <textarea class="input-field" id="chunks-json" rows="6" 
+                              placeholder='{"chatbot_id": "my-bot", "chunks": [...]}'></textarea>
+                </div>
+
+                <!-- Progress -->
+                <div class="crawl-progress" id="upload-progress">
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="progress-bar"></div>
+                    </div>
+                    <p class="progress-text" id="progress-text">Uploading...</p>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="form-actions">
+                <a href="dashboard.html" class="btn btn-secondary">Cancel</a>
+                <button class="btn btn-primary btn-lg" onclick="createChatbot()" id="create-btn">
+                    🚀 Create Chatbot
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="app.js"></script>
+    <script>
+        const urls = [];
+
+        // Auto-generate ID from name
+        document.getElementById('bot-name').addEventListener('input', (e) => {
+            const id = e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+            document.getElementById('bot-id').value = id;
+        });
+
+        // Temperature slider
+        document.getElementById('bot-temperature').addEventListener('input', (e) => {
+            document.getElementById('temp-value').textContent = e.target.value;
+        });
+
+        // Color picker
+        document.getElementById('bot-color').addEventListener('input', (e) => {
+            document.getElementById('color-value').textContent = e.target.value;
+        });
+
+        // URL management
+        function addUrl() {
+            const input = document.getElementById('website-url');
+            const url = input.value.trim();
+            if (!url) return;
+            if (urls.includes(url)) {
+                showToast('URL already added', 'error');
+                return;
+            }
+            urls.push(url);
+            renderUrls();
+            input.value = '';
+        }
+
+        function removeUrl(index) {
+            urls.splice(index, 1);
+            renderUrls();
+        }
+
+        function renderUrls() {
+            const list = document.getElementById('url-list');
+            list.innerHTML = urls.map((url, i) => `
+                <div class="url-item">
+                    <span style="color:var(--accent)">🌐</span>
+                    <span class="url-item-text">${escapeHtml(url)}</span>
+                    <button class="url-item-remove" onclick="removeUrl(${i})">×</button>
+                </div>
+            `).join('');
+        }
+
+        // File upload handler
+        document.getElementById('chunks-file').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            try {
+                const text = await file.text();
+                document.getElementById('chunks-json').value = text;
+                showToast('File loaded! Click Create to upload.', 'success');
+            } catch (err) {
+                showToast('Failed to read file', 'error');
+            }
+        });
+
+        // Create chatbot
+        async function createChatbot() {
+            const apiUrl = getApiUrl();
+            if (!apiUrl) {
+                showToast('Please configure your API URL first (Dashboard → API Settings)', 'error');
+                return;
+            }
+
+            const jsonText = document.getElementById('chunks-json').value.trim();
+            if (!jsonText) {
+                showToast('Please upload or paste your chunks.json data', 'error');
+                return;
+            }
+
+            let data;
+            try {
+                data = JSON.parse(jsonText);
+            } catch {
+                showToast('Invalid JSON format', 'error');
+                return;
+            }
+
+            // Override with form settings
+            const botId = document.getElementById('bot-id').value.trim() || data.chatbot_id || 'my-chatbot';
+            data.chatbot_id = botId;
+
+            // Show progress
+            const progress = document.getElementById('upload-progress');
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const createBtn = document.getElementById('create-btn');
+
+            progress.classList.add('active');
+            createBtn.disabled = true;
+            createBtn.innerHTML = '<div class="spinner"></div> Creating...';
+            progressBar.style.width = '30%';
+            progressText.textContent = 'Uploading chunks to backend...';
+
+            try {
+                const resp = await fetch(`${apiUrl}/api/chatbot`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                    signal: AbortSignal.timeout(120000),
+                });
+
+                progressBar.style.width = '70%';
+                progressText.textContent = 'Building vector index...';
+
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    throw new Error(err.detail || 'Upload failed');
+                }
+
+                progressBar.style.width = '90%';
+                progressText.textContent = 'Saving settings...';
+
+                // Update settings
+                const settings = {
+                    name: document.getElementById('bot-name').value || botId,
+                    system_prompt: document.getElementById('bot-system-prompt').value,
+                    temperature: parseFloat(document.getElementById('bot-temperature').value),
+                    initial_message: document.getElementById('bot-initial-msg').value,
+                    theme_color: document.getElementById('bot-color').value,
+                };
+
+                await fetch(`${apiUrl}/api/chatbot/${encodeURIComponent(botId)}/settings`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings),
+                    signal: AbortSignal.timeout(15000),
+                });
+
+                progressBar.style.width = '100%';
+                progressText.textContent = 'Chatbot created successfully!';
+
+                showToast('🎉 Chatbot created successfully!', 'success');
+
+                setTimeout(() => {
+                    window.location.href = `chat.html?bot=${encodeURIComponent(botId)}`;
+                }, 1500);
+
+            } catch (err) {
+                showToast(`Error: ${err.message}`, 'error');
+                progress.classList.remove('active');
+                createBtn.disabled = false;
+                createBtn.innerHTML = '🚀 Create Chatbot';
+            }
+        }
+    </script>
+</body>
+</html>
